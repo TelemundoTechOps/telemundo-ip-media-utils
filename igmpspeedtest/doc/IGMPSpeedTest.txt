@@ -1,0 +1,33 @@
+IGMPSpeedTest - measures IGMP JOIN and LEAVE performance
+
+This application operates as a signal generator and a signal analyzer.
+
+One instance emits 1-254 multicast streams, while another instance
+issues IGMP JOINs to those streams and measures how long it takes for the network
+to begin data delivery on each stream.
+
+The receiving application can also measure LEAVE performance, but this currently
+is not an accurate measure of network performance, because the Windows
+operating system stops delivering multicast packets to the application long
+before the network stops delivering packets to the host.  
+(TODO - fix in 1.0 by hiding the LEAVE from Windows)
+
+Notes:  
+ - The emitter and receiver must run on different servers to avoid multicast
+loopback problems
+ - Measurement accuracy varies across servers and networks, but it reported by
+the application.  High resolution timers are used, so sub-milliscond accuracy is
+expected in most environments.
+
+
+Usage:  IGMPSpeedTest [OPTIONS]
+  -l, --local=VALUE          IP address of local NIC to use (default: 127.0.0.1)
+  -n, --network=VALUE        IP class C multicast network to listen within (default: 230.8.97)
+  -c, --count=VALUE          Number of multicast streams to test (default: 1)
+      --leave                Include IGMP LEAVE tests (warning: does not accurately show network traffic)
+  -r, --receiver             This instance will JOIN the stream instead of emit the stream.
+  -t, --timeout=VALUE        Duration (in seconds) to wait for data to arrive on multicast before quitting (default: 5)
+      --ttl=VALUE            Time to live for emitted packets (default: 32)
+  -q, --quiet                Just do it, dont ask.
+      --json                 Output results in JSON
+  -h, --help                 Show this message

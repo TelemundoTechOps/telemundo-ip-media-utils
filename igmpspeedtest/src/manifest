@@ -1,0 +1,13 @@
+{
+  "product": "IGMP Tester",
+  "version": "1.1.0",
+  "targetRepoUrl": "https://code.intotosystems.com/svn/artifacts/Telemundo/Beacon/Intoto/IGMPTest",
+  "artifacts": [
+    {
+      "name":  "IGMP Test Application",
+      "source": "IGMPSpeedTest/bin/Release/IGMPSpeedTest.exe",
+      "dest": "IGMPSpeedTest.exe"
+    }
+  ],
+  "dependencies": [  ]
+}
