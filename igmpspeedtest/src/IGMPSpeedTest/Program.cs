@@ -56,6 +56,9 @@ namespace IGMPSpeedTest
             var quietMode = false;
             var json = false;
             var helpWanted = false;
+            var pauseBeforeLeave = false;
+            var startAt = "";
+            DateTime? startTime = null;
 
             // Parse command-line options
             var cmdLineOptions = new OptionSet()
@@ -69,6 +72,8 @@ namespace IGMPSpeedTest
                 { "ttl=","Time to live for emitted packets (default: 32)",(short v) => ttl=v},
                 { "q|quiet","Just do it, dont ask.",v => quietMode = v !=null},
                 { "json","Output results in JSON",v => json = v !=null},
+                { "pbl","Pause before issuing LEAVE messages",v=> pauseBeforeLeave = v !=null },
+                { "startat=","Time to start", (string v) => startAt = v},
                 { "h|help","Show this message",v => helpWanted = v !=null}
             };
 
@@ -90,11 +95,37 @@ namespace IGMPSpeedTest
                 return;
             }
 
+            if (!String.IsNullOrEmpty(startAt))
+            {
+                DateTime ParsedDate = new DateTime();
+                var result = DateTime.TryParse(startAt, out ParsedDate);
+                if(result != true)
+                {
+                    Console.WriteLine("Cannot parse start time: {0}", startAt);
+                    return;
+                }
+                startTime = ParsedDate;                                
+            }
+
+            if (pauseBeforeLeave && includeLeave)
+            {
+                Console.WriteLine("Cannot select both --leave and --pbl");
+                return;
+            }
+
+            if (pauseBeforeLeave && !receiverFlag)
+            {
+                Console.WriteLine("Pause Before Leave (--pbl) only applies when running in receiver (-r) mode");
+                return;
+            }
+
             IgmpSpeedTest speedTester;
+
+
 
             try
             {
-                speedTester = new IgmpSpeedTest(localIp,firstGroup ,streamCount,timeOutSeconds,quietMode,receiverFlag,ttl,includeLeave);
+                speedTester = new IgmpSpeedTest(localIp,firstGroup ,streamCount,timeOutSeconds,quietMode,receiverFlag,ttl,includeLeave,startTime);
             }
             catch (Exception e)
             {
@@ -112,7 +143,7 @@ namespace IGMPSpeedTest
                 Console.WriteLine("JOIN times:");
                 foreach (var r in results.JoinTime)
                     Console.WriteLine(r.Value == -1.0 ? "  {0}: --" : "  {0}: {1}", r.Key, r.Value);
-                if (includeLeave)
+                if (includeLeave && !pauseBeforeLeave)
                 {
                     Console.WriteLine("\nLEAVE times:");
                     foreach (var r in results.LeaveTime)
@@ -128,7 +159,7 @@ namespace IGMPSpeedTest
                     Console.WriteLine("Best JOIN performance: {0}", results.FastestJoin);
                     Console.WriteLine("Average JOIN performance: {0}", results.AverageJoin);
                     Console.WriteLine("Worst JOIN performance: {0}\n", results.SlowestJoin);
-                    if (includeLeave)
+                    if (includeLeave && ! pauseBeforeLeave)
                     {
                         Console.WriteLine("Best LEAVE performance: {0}", results.FastestLeave);
                         Console.WriteLine("Average LEAVE performance: {0}", results.AverageLeave);
@@ -143,6 +174,12 @@ namespace IGMPSpeedTest
             else
                 Console.WriteLine(JsonConvert.SerializeObject(results,Formatting.Indented));
             
+            if (pauseBeforeLeave)
+            {
+                Console.WriteLine("Press ENTER to issue LEAVE messages then quit...");
+                Console.ReadLine();
+
+            }
         }
 
         /// <summary>

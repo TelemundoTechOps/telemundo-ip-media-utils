@@ -61,6 +61,7 @@ namespace IGMPSpeedTest
         private readonly bool _receiverFlag;
         private readonly bool _includeLeave;
         private readonly short _ttl;
+        private readonly DateTime? _startTime;
         private Dictionary<IPAddress, LeaveTimer> _leaveTimers;
         private readonly long _nsecPerTick = (1000L * 1000L * 1000L) / Stopwatch.Frequency;
         IPAddress _localIpAddress;
@@ -78,7 +79,7 @@ namespace IGMPSpeedTest
         /// <param name="includeLeave">boolean.  indicates whether to perform IGMP LEAVE measurements</param>
         public IgmpSpeedTest(string localIp = "127.0.0.1", string firstGroup = "230.8.97.1", int streamCount = 1, 
                              int timeOutSeconds = 5, bool quietMode = false, bool receiverFlag = false, short ttl = 32, 
-                             bool includeLeave = false)
+                             bool includeLeave = false,DateTime? startTime=null)
         {
             _localIp = localIp;
             _streamCount = streamCount;
@@ -87,6 +88,8 @@ namespace IGMPSpeedTest
             _receiverFlag = receiverFlag;
             _ttl = ttl;
             _includeLeave = includeLeave;
+            _startTime = startTime;
+
             var match = Regex.Matches(firstGroup, @"\b(\d{1,3}\.\d{1,3}\.\d{1,3})\.(\d{1,3})\b", RegexOptions.None);
             if (match.Count != 1 || match[0].Groups.Count != 3)
                 throw new ArgumentException("Could not parse multicast IP group " + firstGroup);
@@ -141,6 +144,9 @@ namespace IGMPSpeedTest
             if (_timeOutSeconds < 1)
                 throw new ArgumentException("Timeout must be at least 1 second.");
 
+            if (_startTime.HasValue && DateTime.Compare(_startTime.Value, DateTime.Now) <= 0)
+                throw new ArgumentException(String.Format("Specified start time {0} is earlier than current time {1}", _startTime.Value, DateTime.Now));
+
             return true;
         }
 
@@ -159,9 +165,23 @@ namespace IGMPSpeedTest
                     Console.Write(" - " + _netPrefix + "." + (_firstGroup+_streamCount-1));
                 }
                 Console.WriteLine("");
-                Console.WriteLine("Press ENTER to continue or ^C to abort...");
-                Console.ReadLine();
+
+                if (!_startTime.HasValue)  // do not prompt to start if running in scheduled mode.
+                {                    
+                    Console.WriteLine("Press ENTER to continue or ^C to abort...");
+                    Console.ReadLine();
+                }                
             }
+
+            if (_startTime.HasValue)
+            {
+                if (!_quietMode)
+                    Console.WriteLine("Will start automatically in {0} (at {1})", _startTime.Value - DateTime.Now, _startTime.Value);
+
+                if (DateTime.Compare(_startTime.Value, DateTime.Now) > 0)  // if there is still time left to wait, do that now.
+                    System.Threading.Thread.Sleep(_startTime.Value - DateTime.Now);
+            }
+
             if (_receiverFlag) return TestStreams();
             EmitStreams();
             return new Results(); // empty results returned in emit mode
